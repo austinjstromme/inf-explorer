@@ -1,3 +1,4 @@
+from __future__ import print_function
 import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,25 +12,31 @@ class MNIST_Encoder(Encoder):
         super(MNIST_Encoder, self).__init__(approx_params)
         self.linear1 = nn.Linear(approx_params['D_in'], approx_params['H'])
         self.linear2 = nn.Linear(approx_params['H'], approx_params['D_out'])
-        self.enc_mu = nn.Linear(100, 8)
-        self.enc_log_sigma = nn.Linear(100, 8)
+        self.linear1.weight.data.normal_(0, np.sqrt(2.0/approx_params['D_in']))
+        self.linear2.weight.data.normal_(0, np.sqrt(2.0/approx_params['H']))
 
-    def _get_mu_sigma(self, x):
-        h = F.relu(self.linear1(x))
-        h = F.relu(self.linear2(h))
+        self.enc_mu = nn.Linear(approx_params['D_out'], approx_params['Z_dim'])
+        self.enc_log_sigma = nn.Linear(approx_params['D_out'], approx_params['Z_dim'])
+
+    def _get_mu_log_sigma(self, x):
+        h1 = F.relu(self.linear1(x))
+        h = F.relu(self.linear2(h1))
+        self.h = h
         mu = self.enc_mu(h)
         log_sigma = self.enc_log_sigma(h)
-        sigma = t.exp(log_sigma)
-        return mu, sigma
+        self.mu = mu
+        self.log_sigma = log_sigma
+        return mu, log_sigma
 
     def sample(self, x):
-        mu, sigma = self._get_mu_sigma(x)
-        std_normal = t.from_numpy(np.random.normal(0,1,size=sigma.size())).float()
+        mu, log_sigma = self._get_mu_log_sigma(x)
+        sigma = t.exp(log_sigma)
+        std_normal = t.randn(sigma.size())
         return mu + sigma * Variable(std_normal, requires_grad=False)
 
     def entropy(self, x):
-        mu, sigma = self._get_mu_sigma(x)
-        return t.mean(t.log(sigma))
+        mu, log_sigma = self._get_mu_log_sigma(x)
+        return t.mean(log_sigma)
 
 class MNIST_Decoder(Decoder):
     def __init__(self, **model_params):
@@ -38,9 +45,12 @@ class MNIST_Decoder(Decoder):
         self.linear1 = nn.Linear(model_params['D_in'], model_params['H'])
         self.linear2 = nn.Linear(model_params['H'], model_params['D_out'])
 
+        self.linear1.weight.data.normal_(0, np.sqrt(2.0/model_params['D_in']))
+        self.linear2.weight.data.normal_(0, np.sqrt(2.0/model_params['H']))
+
     def predict_x(self, z):
         h = F.relu(self.linear1(z))
-        return F.relu(self.linear2(h))
+        return F.sigmoid(self.linear2(h))
 
     def loglike(self, x, z):
         """ Return loglikelihood of obs + latents
@@ -65,14 +75,18 @@ if __name__ == "__main__":
 
     print('Number of samples: ', len(mnist))
 
-    encoder = MNIST_Encoder(D_in=input_dim, H=100, D_out=100)
-    decoder = MNIST_Decoder(D_in=8, H=100, D_out=input_dim)
+    encoder = MNIST_Encoder(D_in=input_dim, H=200, D_out=100, Z_dim=25)
+    decoder = MNIST_Decoder(D_in=25, H=200, D_out=input_dim)
     vi = VI(encoder, decoder)
 
-    optimizer = t.optim.Adam(vi.parameters(), lr=0.001)
-    l = 0
-    p_bar = tqdm(range(100))
+    optimizer = t.optim.Adam(vi.parameters(), lr=0.00001)
+    p_bar = tqdm(range(21))
+    _, plot_data = enumerate(dataloader, 0).next()
+    plot_inputs, plot_labels = plot_data
+    plot_inputs = Variable(plot_inputs.resize_(batch_size, input_dim))
+
     for epoch in p_bar:
+        l = 0
         for i, data in enumerate(dataloader, 0):
             inputs, _ = data
             inputs = Variable(inputs.resize_(batch_size, input_dim))
@@ -80,12 +94,21 @@ if __name__ == "__main__":
             loss = -1.0*vi.elbo(inputs)
             loss.backward()
             optimizer.step()
-            l = -1.0*loss.data[0]
+            l += -1.0*loss.data[0]
             p_bar.set_description("Epoch {0}, ELBO {1}".format(epoch, l))
         print(epoch, l)
 
-        if epoch % 5 == 0:
+        if epoch % 10 == 0:
             import matplotlib.pyplot as plt
-            plt.imshow(vi.predict_x(inputs).data[0].numpy().reshape(28, 28), cmap='gray')
-            plt.show(block=True)
+            fig, axes = plt.subplots(5,2)
+            axes[0,0].imshow(vi.predict_x(plot_inputs).data[0].numpy().reshape(28, 28), cmap='gray')
+            axes[0,1].imshow(plot_inputs.data[0].numpy().reshape(28, 28), cmap='gray')
+            axes[1,0].imshow(vi.predict_x(plot_inputs).data[1].numpy().reshape(28, 28), cmap='gray')
+            axes[1,1].imshow(plot_inputs.data[1].numpy().reshape(28, 28), cmap='gray')
+            axes[2,0].imshow(vi.predict_x(plot_inputs).data[2].numpy().reshape(28, 28), cmap='gray')
+            axes[2,1].imshow(plot_inputs.data[2].numpy().reshape(28, 28), cmap='gray')
+            axes[3,0].imshow(vi.predict_x(plot_inputs).data[3].numpy().reshape(28, 28), cmap='gray')
+            axes[3,1].imshow(plot_inputs.data[3].numpy().reshape(28, 28), cmap='gray')
+            axes[4,0].imshow(vi.predict_x(plot_inputs).data[4].numpy().reshape(28, 28), cmap='gray')
+            axes[4,1].imshow(plot_inputs.data[4].numpy().reshape(28, 28), cmap='gray')
 
