@@ -47,8 +47,8 @@ class MNIST_Decoder(Decoder):
             $\log Pr(X, Z | \theta)$
         """
         x_predict = self.predict_x(z)
-        loglike = -0.5*nn.MSELoss()(x_predict, x) # Pr(X | Z)
-        loglike = -0.5*t.mean(z*z) # Pr(Z) = Normal(0,1)
+        loglike = -0.5*t.mean((x_predict-x)*(x_predict-x)) # Pr(X | Z)
+        loglike += -0.5*t.mean(z*z) # Pr(Z) = Normal(0,1)
         return loglike
 
 if __name__ == "__main__":
@@ -69,8 +69,8 @@ if __name__ == "__main__":
     decoder = MNIST_Decoder(D_in=8, H=100, D_out=input_dim)
     vi = VI(encoder, decoder)
 
-    optimizer = t.optim.Adam(vi.parameters(), lr=0.0001)
-    l = None
+    optimizer = t.optim.Adam(vi.parameters(), lr=0.001)
+    l = 0
     p_bar = tqdm(range(100))
     for epoch in p_bar:
         for i, data in enumerate(dataloader, 0):
