@@ -20,12 +20,12 @@ class Encoder(nn.Module):
         raise NotImplementedError()
 
 class Decoder(nn.Module):
-    """ Decoder (Model to p(z | x, \theta) """
+    """ Decoder Model to p(x, z | \theta) """
     def __init__(self, model_params):
         super(Decoder, self).__init__()
         self.model_params = model_params
 
-    def generate_samples(self, N):
+    def generate_data(self, S):
         """ Generate Samples of X, Z """
         raise NotImplementedError()
 

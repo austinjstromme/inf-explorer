@@ -24,8 +24,8 @@ class MeanFieldGaussian(Encoder):
         """ Return entropy of variational approx
             E_q[\log q(z | x, phi)]
         """
-        log_lambduh = self.nn_log_lambda(x)
-        return -0.5*t.mean(lambduh)
+        log_lambduh = self.nn_log_lambduh(x)
+        return -0.5*t.mean(log_lambduh)
 
     def sample(self, x):
         """ Return a sample z from q(z | x, phi) """
@@ -37,14 +37,14 @@ def elementwise_MFGaussian(input_dim, latent_dim,
         h_dims=[100,100], layerNN=nn.ReLU):
     """ Return elementwise nn_mu and nn_log_lambduh nn.Modules """
     layer_dims = [input_dim]+h_dims+[latent_dim]
-    mu_layers = [
-            layerNN(nn.Linear(layer_dims[ii], layer_dims[ii+1]))
+    mu_layers = [x for y in [
+            [nn.Linear(layer_dims[ii], layer_dims[ii+1]), layerNN()]
             for ii in range(len(layer_dims)-1)
-            ]
-    lambduh_layers = [
-            layerNN(nn.Linear(layer_dims[ii], layer_dims[ii+1]))
+            ] for x in y ]
+    lambduh_layers = [x for y in [
+            [nn.Linear(layer_dims[ii], layer_dims[ii+1]), layerNN()]
             for ii in range(len(layer_dims)-1)
-            ]
+            ] for x in y ]
     nn_mu = nn.Sequential(*mu_layers)
     nn_log_lambduh = nn.Sequential(*lambduh_layers)
     nn_mu = ElementwiseNNWrap(nn_mu)
@@ -69,7 +69,7 @@ class ElementwiseNNWrap(nn.Module):
         self.dim = dim
 
     def forward(self, x):
-        return t.concat([self.nn(x_i) for x_i in x.split(self.dim)])
+        return t.cat([self.nn(x_i) for x_i in x])
 
 class WindowNNWrap(nn.Module):
     """ Wraps input nn.Module to be applied over sliding window dim """
