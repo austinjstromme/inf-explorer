@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 from base_class import Decoder
 
-class SeqDecoder(Decoder):
+class LDSDecoder(Decoder):
     """
     A map from hidden states in \R^m to means in \R^n.
 
@@ -19,7 +19,7 @@ class SeqDecoder(Decoder):
         Q: matrix in \R^n \times \R^n latent state innovation variance
     """
     def __init__(self, **model_params):
-        super(SeqDecoder, self).__init__(model_params=model_params)
+        super(LDSDecoder, self).__init__(model_params=model_params)
 
         self.m = model_params['m']
         self.n = model_params['n']
@@ -38,36 +38,70 @@ class SeqDecoder(Decoder):
 
 
     def predict_x(self, z):
-        if (z.size() != self.m*self.S):
-            raise ValueError("z is of wrong size")
-
         x = t.zeros((self.S, self.n))
 
         noise = t.distributions.Normal(t.zeros(self.m), self.R)
         for s in xrange(0, self.S):
             eps = noise.sample()
-            x[s] = t.mv(self.C, z[s]) + noise
+            x[s] = t.matmul(self.C, z[s]) + noise
 
         return x
 
     def loglike(self, x, z):
-#        if (np.prod(x.size()) != self.n*self.S):
-#            raise ValueError("x is of wrong size")
-#        if (np.prod(z.size()) != self.m*self.S): raise ValueError("z is of wrong size")
-#
-        emit_dist = t.distributions.Normal(t.mv(self.C, z[0]), self.R)
-        res = emit_dist.log_prob(x[0])
+        z = z.permute(1, 2, 0)
+        x = x.permute(1, 2, 0)
+        emit_dist = t.distributions.Normal(
+                t.matmul(self.C, z[0]), self.R)
+        loglike = emit_dist.log_prob(x[0])
         for s in xrange(1, self.S):
-            emit_dist = t.distributions.Normal(t.mv(self.C, z[s]), self.R)
-            trans_dist = t.distributions.Normal(t.mv(self.A, z[s - 1]), self.Q)
+            emit_dist = t.distributions.Normal(
+                    t.matmul(self.C,z[s]), self.R)
+            trans_dist = t.distributions.Normal(
+                    t.matmul(self.A, z[s-1]), self.Q)
 
             p_emit = emit_dist.log_prob(x[s])
             p_tran = trans_dist.log_prob(z[s])
 
-            res += p_emit + p_tran
+            loglike += p_emit + p_tran
 
-        return res
+        return t.mean(loglike)
 
-    def generate_data(self):
-        # TODO: implement
-        raise NotImplemented()
+    def generate_data(self, N):
+        A = np.array(self.A.data.tolist())
+        C = np.array(self.C.data.tolist())
+        Q = np.array(self.Q.data.tolist())
+        R = np.array(self.R.data.tolist())
+
+        Zs = [None] * N
+        Xs = [None] * N
+
+        for n in range(N):
+            z = np.zeros((self.S, self.m))
+            x = np.zeros((self.S, self.n))
+            z_prev = np.random.multivariate_normal(
+                    mean = np.zeros(self.m),
+                    cov = Q*2,
+                    )
+            for s in range(0,self.S):
+                z_cur = np.random.multivariate_normal(
+                        mean=np.dot(A, z_prev),
+                        cov=Q,
+                        )
+                x_cur = np.random.multivariate_normal(
+                        mean=np.dot(C, z_cur),
+                        cov=R,
+                        )
+
+                z[s] = z_cur
+                x[s] = x_cur
+                z_prev = z_cur
+
+            Zs[n] = z
+            Xs[n] = x
+
+        Z = np.stack(Zs, axis=0)
+        X = np.stack(Xs, axis=0)
+
+        return X, Z
+
+

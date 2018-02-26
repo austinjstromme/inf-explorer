@@ -25,7 +25,7 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.model_params = model_params
 
-    def generate_data(self, S):
+    def generate_data(self, N):
         """ Generate Samples of X, Z """
         raise NotImplementedError()
 

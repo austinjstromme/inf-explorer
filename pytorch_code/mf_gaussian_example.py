@@ -12,15 +12,15 @@ from tqdm import tqdm
 n = 1 # Dimension of x_s
 m = 1 # Dimension of z_s
 batch_size = 16 # Batchsize
-N = 256 # Number of replications
+N = 64 # Number of replications
 S = 100 # Length of Timeseries
 
 
-# LDS Model
-A = np.eye(m)*0.9
-Q = np.eye(m)*0.1
-C = np.block([[np.eye(m,m)], [np.random.normal(size=(n-m, m))]])
-R = np.eye(n)*0.1
+# LDS Model (really mf gaussian since A = 0)
+A = np.eye(m)*0.0
+Q = np.eye(m)*1.0
+C = 2.0*np.block([[np.eye(m,m)], [np.random.normal(size=(n-m, m))]])
+R = np.eye(n)*0.01
 
 decoder = LDSDecoder(m=m, n=n, S=S, C=C, R=R, A=A, Q=Q)
 X, Z = decoder.generate_data(N=N)
@@ -36,7 +36,7 @@ vi = VI(encoder=encoder, decoder=decoder)
 
 
 # Only train encoder
-optimizer = t.optim.Adam(vi.encoder.parameters(), lr=0.01)
+optimizer = t.optim.Adam(vi.encoder.parameters(), lr=0.1)
 
 varX = Variable(t.from_numpy(X).float())
 varZ = Variable(t.from_numpy(Z).float())
@@ -45,7 +45,7 @@ dataset = TensorDataset(t.from_numpy(X).float(), t.from_numpy(Z).float())
 dataloader = t.utils.data.DataLoader(dataset, batch_size=batch_size,
         shuffle=True)
 
-p_bar = tqdm(range(51))
+p_bar = tqdm(range(100))
 for epoch in p_bar:
     elbo_hat, counts = 0.0, 0.0
     for i, data in enumerate(dataloader, 0):

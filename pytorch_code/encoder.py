@@ -34,21 +34,20 @@ class MeanFieldGaussian(Encoder):
         return mu + sigma * Variable(t.randn(sigma.size()), requires_grad=False)
 
 def elementwise_MFGaussian(input_dim, latent_dim,
-        h_dims=[100,100], layerNN=nn.ReLU):
+        h_dims=[10,10], layerNN=nn.SELU):
     """ Return elementwise nn_mu and nn_log_lambduh nn.Modules """
     layer_dims = [input_dim]+h_dims+[latent_dim]
     mu_layers = [x for y in [
             [nn.Linear(layer_dims[ii], layer_dims[ii+1]), layerNN()]
             for ii in range(len(layer_dims)-1)
             ] for x in y ]
+    mu_layers = mu_layers[:-1] # Drop last layer
     lambduh_layers = [x for y in [
             [nn.Linear(layer_dims[ii], layer_dims[ii+1]), layerNN()]
             for ii in range(len(layer_dims)-1)
             ] for x in y ]
     nn_mu = nn.Sequential(*mu_layers)
     nn_log_lambduh = nn.Sequential(*lambduh_layers)
-    nn_mu = ElementwiseNNWrap(nn_mu)
-    nn_log_lambduh = ElementwiseNNWrap(nn_log_lambduh)
     return nn_mu, nn_log_lambduh
 
 #def dial_conv_MFGaussian(input_dim, latent_dim,
@@ -59,27 +58,6 @@ def elementwise_MFGaussian(input_dim, latent_dim,
 #        conv = nn.Conv1d(
 
 
-
-# Helper Classes
-class ElementwiseNNWrap(nn.Module):
-    """ Wraps input nn.Module to be applied elementwise over dim """
-    def __init__(self, nn, dim=0):
-        super(ElementwiseNNWrap, self).__init__()
-        self.nn = nn
-        self.dim = dim
-
-    def forward(self, x):
-        return t.cat([self.nn(x_i) for x_i in x])
-
-class WindowNNWrap(nn.Module):
-    """ Wraps input nn.Module to be applied over sliding window dim """
-    def __init__(self, nn, dim=0, window=1):
-        super(WindowNNWrap, self).__init__()
-        self.nn = nn
-        self.dim = dim
-
-    def forward(self, x):
-        raise NotImplementedError()
 
 # Example
 
