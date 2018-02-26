@@ -50,7 +50,7 @@ class VI(nn.Module):
         entropy = self.encoder.entropy(x=x)
         loglike = self.decoder.loglike(x=x, z=z)
         elbo_hat = loglike + entropy
-        return elbo_hat/x.shape[0]
+        return elbo_hat/x.shape[1]
 
     def predict_x(self, x):
         z = self.encoder.sample(x=x)

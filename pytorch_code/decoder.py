@@ -40,7 +40,7 @@ class LDSDecoder(Decoder):
     def predict_x(self, z):
         x = t.zeros((self.S, self.n))
 
-        noise = t.distributions.Normal(t.zeros(self.m), self.R)
+        noise = t.distributions.Normal(t.zeros(self.m), self.LR)
         for s in xrange(0, self.S):
             eps = noise.sample()
             x[s] = t.matmul(self.C, z[s]) + noise
@@ -51,13 +51,13 @@ class LDSDecoder(Decoder):
         z = z.permute(1, 2, 0)
         x = x.permute(1, 2, 0)
         emit_dist = t.distributions.Normal(
-                t.matmul(self.C, z[0]), self.R)
+                t.matmul(self.C, z[0]), self.LR)
         loglike = emit_dist.log_prob(x[0])
         for s in xrange(1, self.S):
             emit_dist = t.distributions.Normal(
-                    t.matmul(self.C,z[s]), self.R)
+                    t.matmul(self.C,z[s]), self.LR)
             trans_dist = t.distributions.Normal(
-                    t.matmul(self.A, z[s-1]), self.Q)
+                    t.matmul(self.A, z[s-1]), self.LQ)
 
             p_emit = emit_dist.log_prob(x[s])
             p_tran = trans_dist.log_prob(z[s])

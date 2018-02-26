@@ -25,12 +25,12 @@ class MeanFieldGaussian(Encoder):
             E_q[\log q(z | x, phi)]
         """
         log_lambduh = self.nn_log_lambduh(x)
-        return -0.5*t.mean(log_lambduh)
+        return -0.5*t.sum(t.mean(log_lambduh, dim=0))
 
     def sample(self, x):
         """ Return a sample z from q(z | x, phi) """
         mu, log_lambduh = self.nn_mu(x), self.nn_log_lambduh(x)
-        sigma = t.exp(-1.0*log_lambduh/2.0)
+        sigma = t.exp(-0.5*log_lambduh)
         return mu + sigma * Variable(t.randn(sigma.size()), requires_grad=False)
 
 def elementwise_MFGaussian(input_dim, latent_dim,
@@ -46,18 +46,80 @@ def elementwise_MFGaussian(input_dim, latent_dim,
             [nn.Linear(layer_dims[ii], layer_dims[ii+1]), layerNN()]
             for ii in range(len(layer_dims)-1)
             ] for x in y ]
+    lambduh_layers = lambduh_layers[:-1] # Drop last layer
     nn_mu = nn.Sequential(*mu_layers)
     nn_log_lambduh = nn.Sequential(*lambduh_layers)
     return nn_mu, nn_log_lambduh
 
-#def dial_conv_MFGaussian(input_dim, latent_dim,
-#        kernel_sizes = [3, 3], dilations = [1, 2]):
-#
-#    in_dim = input_dim
-#    for kernel_size, dilation in zip(kernel_sizes, dilations):
-#        conv = nn.Conv1d(
+def dial_conv_MFGaussian(input_dim, latent_dim,
+        h_dims = [10,10], kernel_sizes = [3, 3], dilations = [1, 2],
+        layerNN=nn.SELU):
 
+    kernel_sizes = kernel_sizes + [1]
+    dilations = dilations + [1]
+    padding_sizes = [(kernel_size-1)*dilation/2
+            for kernel_size, dilation in zip(kernel_sizes, dilations)]
+    layer_dims = [input_dim]+h_dims+[latent_dim]
 
+    if layerNN is not None:
+        mu_conv_layers = [x
+                for y in [
+                    [nn.Conv1d(layer_dims[ii], layer_dims[ii+1],
+                        kernel_size=kernel_sizes[ii],
+                        padding=padding_sizes[ii],
+                        dilation=dilations[ii]
+                        ),
+                    layerNN()]
+                    for ii in range(len(layer_dims)-1)]
+                for x in y]
+        mu_conv_layers = mu_conv_layers[:-1] # Drop last layer
+        lambduh_conv_layers = [x
+                for y in [
+                    [nn.Conv1d(layer_dims[ii], layer_dims[ii+1],
+                        kernel_size=kernel_sizes[ii],
+                        padding=padding_sizes[ii],
+                        dilation=dilations[ii]
+                        ),
+                    layerNN()]
+                    for ii in range(len(layer_dims)-1)]
+                for x in y]
+        lambduh_conv_layers = lambduh_conv_layers[:-1] # Drop last layer
+    else:
+        mu_conv_layers = [
+                nn.Conv1d(layer_dims[ii], layer_dims[ii+1],
+                        kernel_size=kernel_sizes[ii],
+                        padding=padding_sizes[ii],
+                        dilation=dilations[ii]
+                        )
+                for ii in range(len(layer_dims)-1)
+                ]
+        lambduh_conv_layers = [
+                nn.Conv1d(layer_dims[ii], layer_dims[ii+1],
+                        kernel_size=kernel_sizes[ii],
+                        padding=padding_sizes[ii],
+                        dilation=dilations[ii]
+                        )
+                for ii in range(len(layer_dims)-1)
+                ]
+
+    nn_mu = ConvWrap(nn=nn.Sequential(*mu_conv_layers))
+    nn_log_lambduh = ConvWrap(nn=nn.Sequential(*lambduh_conv_layers))
+
+    return nn_mu, nn_log_lambduh
+
+class ConvWrap(nn.Module):
+    def __init__(self, nn):
+        super(ConvWrap, self).__init__()
+        self.nn = nn
+
+    def forward(self, x):
+        # x is batch by time by dim
+        x = x.permute(0, 2, 1)
+        # x is batch by dim by time
+        z_out = self.nn(x)
+        # swap channel + time back
+        z_out = z_out.permute(0, 2, 1)
+        return z_out
 
 # Example
 

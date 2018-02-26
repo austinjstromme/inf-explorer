@@ -1,7 +1,7 @@
 #
 import numpy as np
 from base_class import VI
-from encoder import MeanFieldGaussian, elementwise_MFGaussian
+from encoder import MeanFieldGaussian, elementwise_MFGaussian, dial_conv_MFGaussian
 from decoder import LDSDecoder
 from data_generator import generate_lds_data
 import torch as t
@@ -17,17 +17,21 @@ S = 100 # Length of Timeseries
 
 
 # LDS Model
-A = np.eye(m)*0.9
-Q = np.eye(m)*0.1
+A = np.eye(m)*0.99
+Q = np.eye(m)*1.0
 C = np.block([[np.eye(m,m)], [np.random.normal(size=(n-m, m))]])
-R = np.eye(n)*0.1
+R = np.eye(n)*1.0
 
 decoder = LDSDecoder(m=m, n=n, S=S, C=C, R=R, A=A, Q=Q)
 X, Z = decoder.generate_data(N=N)
 
 # VI approx
-nn_mu, nn_log_lambduh = elementwise_MFGaussian(input_dim=n, latent_dim=m,
-        h_dims=[])
+#nn_mu, nn_log_lambduh = elementwise_MFGaussian(input_dim=n, latent_dim=m,
+#        h_dims=[])
+nn_mu, nn_log_lambduh = dial_conv_MFGaussian(input_dim=n, latent_dim=m,
+        h_dims=[10, 10, 10], kernel_sizes = [3, 3, 3], dilations=[1,2,4],
+        layerNN=t.nn.SELU)
+
 encoder = MeanFieldGaussian(nn_mu, nn_log_lambduh)
 
 
@@ -36,7 +40,7 @@ vi = VI(encoder=encoder, decoder=decoder)
 
 
 # Only train encoder
-optimizer = t.optim.Adam(vi.encoder.parameters(), lr=0.01)
+optimizer = t.optim.Adam(vi.encoder.parameters(), lr=0.001)
 
 varX = Variable(t.from_numpy(X).float())
 varZ = Variable(t.from_numpy(Z).float())
@@ -62,8 +66,8 @@ for epoch in p_bar:
 
     if epoch % 10 == 0:
         batch_index = 10
-        mu_z = np.array(vi.encoder.nn_mu(varX[batch_index]).data.tolist())
-        sigma_z = np.exp(-0.5*np.array(vi.encoder.nn_log_lambduh(varX[batch_index]).data.tolist()))
+        mu_z = np.array(vi.encoder.nn_mu(varX[batch_index:batch_index+1]).data.tolist())[0]
+        sigma_z = np.exp(-0.5*np.array(vi.encoder.nn_log_lambduh(varX[batch_index:batch_index+1]).data.tolist()))[0]
         import matplotlib.pyplot as plt
         plt.figure()
         plt.plot(X[batch_index], "o", label="X")
