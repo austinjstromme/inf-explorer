@@ -26,7 +26,9 @@ class Decoder(nn.Module):
         self.model_params = model_params
 
     def generate_data(self, N):
-        """ Generate Samples of X, Z """
+        """ Generate Samples of X, Z
+        Shape of X and Z should be (N by T by n) and (N by T by m)
+        """
         raise NotImplementedError()
 
     def loglike(self, x, z):
