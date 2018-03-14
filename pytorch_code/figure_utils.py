@@ -14,8 +14,8 @@ def plot_encoder(encoder, x, z,
 
     if ax is None:
         fig, ax = plt.subplots(1,1)
-    ax.plot(x, "o", label="X")
-    ax.plot(z, "-", label="Z")
+    ax.plot(x, "oC0", label="X")
+    ax.plot(z, "-C1", label="Z")
 
     ax.plot(mu_z, "--k", label="Eq(Z|X)")
     ax.plot(mu_z+sigma_z, ":k", label="STDq(Z|X)")
@@ -40,7 +40,7 @@ def plot_encoder_resid(encoder, x, z,
 
     if ax is None:
         fig, ax = plt.subplots(1,1)
-    ax.plot(np.zeros_like(x), "-", label="Z-Z")
+    ax.plot(np.zeros_like(x), "-C1", label="Z-Z")
     ax.plot(mu_z-z, "--k", label="Eq(Z|X)-Z")
     ax.plot(mu_z-z+sigma_z, ":k", label="STDq(Z|X)-Z")
     ax.plot(mu_z-z-sigma_z, ":k", label=None)

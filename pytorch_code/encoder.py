@@ -179,6 +179,16 @@ def elementwise_NN(input_dim, latent_dim,
     NN = nn.Sequential(*NN_layers)
     return NN
 
+def full_connected_NN(S, h_dims = [100], layerNN=nn.SELU):
+    layer_dims = [S] + h_dims + [S]
+    NN_layers = [x for y in [
+            [nn.Linear(layer_dims[ii], layer_dims[ii+1]), layerNN()]
+            for ii in range(len(layer_dims)-1)
+            ] for x in y ]
+    NN_layers = NN_layers[:-1] # Drop last nonlinear activation
+    NN = ConvWrap(nn.Sequential(*NN_layers))
+    return NN
+
 def dial_conv_NN(input_dim, latent_dim,
         h_dims = [10,10], kernel_sizes = [3, 3], dilations = [1, 2],
         layerNN=nn.SELU):
@@ -212,6 +222,30 @@ def dial_conv_NN(input_dim, latent_dim,
 
     NN = ConvWrap(nn=nn.Sequential(*NN_conv_layers))
     return NN
+
+def rnn_type_NN(input_dim, latent_dim,
+        h_dims = [10, 10], num_layers=[1, 1],
+        bidirectional=True, layerNN=nn.RNN):
+    """ Note finall output RNN is always single directional """
+    if bidirectional:
+        input_dims = [input_dim] + [h_dim*2 for h_dim in h_dims]
+    else:
+        input_dims = [input_dim] + h_dims
+    output_dims =  h_dims + [latent_dim]
+    num_layers = num_layers + [1]
+    bidirects = [bidirectional]*len(h_dims) + [False]
+    NN_rnn_layers = [
+            layerNN(
+                input_size=input_dims[ii],
+                hidden_size=output_dims[ii],
+                num_layers=num_layers[ii],
+                bidirectional=bidirects[ii]
+                )
+            for ii in range(len(input_dims))]
+    NN = RNNWrap(*NN_rnn_layers)
+    return NN
+
+
 
 def elementwise_MFGaussian(input_dim, latent_dim,
         h_dims=[10,10], layerNN=nn.SELU):
@@ -299,6 +333,23 @@ class ConvWrap(nn.Module):
         z_out = self.nn(x)
         # swap channel + time back
         z_out = z_out.permute(0, 2, 1)
+        return z_out
+
+class RNNWrap(nn.Module):
+    def __init__(self, *args):
+        super(RNNWrap, self).__init__()
+        self.nns = args
+        for ii, nn in enumerate(args):
+            setattr(self, "nn{0}".format(ii), nn)
+
+    def forward(self, x):
+        # x is batch by time by dim
+        x = x.permute(1, 0, 2)
+        # x is time by batch by dim
+        for nn in self.nns:
+            x = nn(x)[0]
+        # swap channel + time back
+        z_out = x.permute(1, 0, 2)
         return z_out
 
 # Example

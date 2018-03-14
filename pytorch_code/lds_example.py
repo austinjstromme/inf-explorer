@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 from base_class import VI
 from encoder import (
         MeanFieldGaussian, elementwise_MFGaussian, dial_conv_MFGaussian,
-        TriDiagInvGaussian, elementwise_NN, dial_conv_NN,
+        TriDiagInvGaussian, elementwise_NN, dial_conv_NN, rnn_type_NN,
+        full_connected_NN,
         )
 from decoder import LDSDecoder
 from data_generator import generate_lds_data
@@ -41,6 +42,14 @@ print("Setting Up VI Encoder")
 #nn_mu, nn_log_lambduh = dial_conv_MFGaussian(input_dim=n, latent_dim=m,
 #        h_dims=[10, 10, 10], kernel_sizes = [3, 3, 3], dilations=[1,2,4],
 #        layerNN=t.nn.SELU)
+
+#nn_mu = rnn_type_NN(input_dim=n, latent_dim=n,
+#        h_dims=[3, 3], layerNN=t.nn.LSTM)
+#nn_log_lambduh = rnn_type_NN(input_dim=n, latent_dim=n,
+#        h_dims=[3, 3], layerNN=t.nn.LSTM)
+
+#nn_mu = full_connected_NN(S=S, h_dims=[S, S])
+#nn_log_lambduh = full_connected_NN(S=S, h_dims=[S, S])
 #
 #encoder = MeanFieldGaussian(nn_mu, nn_log_lambduh)
 
@@ -51,6 +60,18 @@ nn_log_alpha = dial_conv_NN(input_dim=n, latent_dim=m, h_dims=[10,10,10],
         kernel_sizes=[3, 3, 3], dilations=[1,2,4], layerNN=t.nn.SELU)
 nn_beta = dial_conv_NN(input_dim=n, latent_dim=m, h_dims=[10,10,10],
         kernel_sizes=[3, 3, 3], dilations=[1,2,4], layerNN=t.nn.SELU)
+
+#nn_mu = rnn_type_NN(input_dim=n, latent_dim=n,
+#        h_dims=[3], layerNN=t.nn.GRU)
+#nn_log_alpha = rnn_type_NN(input_dim=n, latent_dim=n,
+#        h_dims=[3], layerNN=t.nn.GRU)
+#nn_beta = rnn_type_NN(input_dim=n, latent_dim=n,
+#        h_dims=[3], layerNN=t.nn.GRU)
+
+#nn_mu = full_connected_NN(S=S, h_dims=[S, S])
+#nn_log_alpha = full_connected_NN(S=S, h_dims=[S, S])
+#nn_beta = full_connected_NN(S=S, h_dims=[S, S])
+
 encoder = TriDiagInvGaussian(nn_mu, nn_log_alpha, nn_beta)
 
 # Combine to Do VI
@@ -102,10 +123,11 @@ for epoch in p_bar:
 #        plt.show()
 
         from figure_utils import plot_encoder, plot_encoder_resid
-        plot_encoder(vi.encoder, X[batch_index], Z[batch_index])
-        plt.title("Plot of data, true latent, and variational mean\n Epoch={0} Seq={1}".format(epoch, batch_index))
-        plot_encoder_resid(vi.encoder, X[batch_index], Z[batch_index])
-        plt.title("Plot of residuals, and variational approximation residuals\n Epoch={0} Seq={1}".format(epoch, batch_index))
+        fig, axes = plt.subplots(1, 2, sharex=True)
+        plot_encoder(vi.encoder, X[batch_index], Z[batch_index], ax=axes[0])
+        axes[0].set_title("Plot of data, true latent, and variational mean\n Epoch={0} Seq={1}".format(epoch, batch_index))
+        plot_encoder_resid(vi.encoder, X[batch_index], Z[batch_index], ax=axes[1])
+        axes[1].set_title("Plot of residuals, and variational approximation residuals\n Epoch={0} Seq={1}".format(epoch, batch_index))
         plt.show()
 
 
