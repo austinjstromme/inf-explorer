@@ -25,7 +25,7 @@ S = 100 # Length of Timeseries
 
 # SLDS Model
 print("Setting Up SLDS Model Decoder")
-Pi = np.array([[0.9, 0.1, 0.0], [0.1, 0.8, 0.1], [0.0, 0.1, 0.9]])
+Pi = np.array([[0.9, 0.1, 0.0], [0.05, 0.9, 0.05], [0.0, 0.1, 0.9]])
 A = np.array([np.eye(m)*0.99, np.eye(m)*0.99, np.eye(m)*0.99])
 Delta_Q = np.array([np.ones(m), np.zeros(m), -np.ones(m)])*0.05
 Q = np.array([np.eye(m), np.eye(m), np.eye(m)])*0.1

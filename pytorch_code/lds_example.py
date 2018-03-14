@@ -38,7 +38,7 @@ X, Z = decoder.generate_data(N=N)
 # VI approx
 print("Setting Up VI Encoder")
 #nn_mu, nn_log_lambduh = elementwise_MFGaussian(input_dim=n, latent_dim=m,
-#        h_dims=[])
+#        h_dims=[3, 3], layerNN=t.nn.SELU)
 #nn_mu, nn_log_lambduh = dial_conv_MFGaussian(input_dim=n, latent_dim=m,
 #        h_dims=[10, 10, 10], kernel_sizes = [3, 3, 3], dilations=[1,2,4],
 #        layerNN=t.nn.SELU)
@@ -79,7 +79,7 @@ print("Setting up optimization problem")
 vi = VI(encoder=encoder, decoder=decoder)
 
 # Only train encoder
-optimizer = t.optim.Adam(vi.encoder.parameters(), lr=0.01)
+optimizer = t.optim.Adam(vi.encoder.parameters(), lr=0.001)
 
 varX = Variable(t.from_numpy(X).float())
 varZ = Variable(t.from_numpy(Z).float())
