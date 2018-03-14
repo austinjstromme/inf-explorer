@@ -72,16 +72,17 @@ for alg_name in encoders.keys():
     path_to_figs = os.path.join(experiment_name,"figs", alg_name)
     if not os.path.isdir(path_to_figs):
         os.makedirs(path_to_figs)
-    for lr in [0.01, 0.001, 0.00001, 0.0000001]:
-       try:
-            df = train_encoder_vi(encoders[alg_name], decoder, alg_name,
-                lr=lr, trainX=trainX, trainZ=trainZ, testX=testX, testZ=testZ,
-                num_epochs=101,
-                path_to_out=path_to_out, path_to_figs=path_to_figs)
-            break
-        except:
-            print("Error with learning rate {0} for {1}".format(lr, alg_name))
-            continue
+    lr = 0.01
+    if alg_name in ["FullSELU_TriDiag", "SimpleRNN_TriDiag", "SELU_TriDiag"]:
+        lr = 0.0001
+    try:
+        df = train_encoder_vi(encoders[alg_name], decoder, alg_name,
+            lr=lr, trainX=trainX, trainZ=trainZ, testX=testX, testZ=testZ,
+            num_epochs=101,
+            path_to_out=path_to_out, path_to_figs=path_to_figs)
+    except:
+        print("Error with learning rate {0} for {1}".format(lr, alg_name))
+
     df['alg_name'] = alg_name
     agg_df = agg_df.append(df, ignore_index=True)
     agg_df.to_csv(os.path.join(path_to_out, "agg_df.csv"))

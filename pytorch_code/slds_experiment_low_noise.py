@@ -16,7 +16,7 @@ from encoder import (
         TriDiagInvGaussian, elementwise_NN, dial_conv_NN, rnn_type_NN,
         full_connected_NN,
         )
-from decoder import LDSDecoder
+from decoder import SLDSDecoder
 from data_generator import generate_lds_data
 from figure_utils import plot_encoder, plot_encoder_resid
 from experiment_utils import get_encoder, train_encoder_vi
@@ -33,18 +33,20 @@ S = 100 # Length of Timeseries
 
 
 # LDS Model
-print("Setting Up LDS Model Decoder")
-A = np.eye(m)*0.99
-Q = np.eye(m)*0.1
-C = np.block([[np.eye(m,m)], [np.random.normal(size=(n-m, m))]])
-R = np.eye(n)*1.0
+print("Setting Up SLDS Model Decoder")
+Pi = np.array([[0.9, 0.1, 0.0], [0.05, 0.9, 0.05], [0.0, 0.1, 0.9]])
+A = np.array([np.eye(m)*0.99, np.eye(m)*0.99, np.eye(m)*0.99])
+Delta_Q = np.array([np.ones(m), np.zeros(m), -np.ones(m)])*0.05
+Q = np.array([np.eye(m), np.eye(m), np.eye(m)])*0.1
+C = np.array([np.eye(n), np.eye(n), np.eye(n)])
+R = np.array([np.eye(n), np.eye(n), np.eye(n)])*0.1
+num_states = np.shape(A)[0]
 
-decoder = LDSDecoder(m=m, n=n, S=S, C=C, R=R, A=A, Q=Q)
+decoder = SLDSDecoder(num_states=num_states, m=m, n=n, S=S, C=C, R=R, A=A, Q=Q,
+        Delta_Q=Delta_Q, Pi=Pi)
 print("Generating Data")
-trainX, trainZ = decoder.generate_data(N=N)
-testX, testZ = decoder.generate_data(N=N)
-var_testX = Variable(t.from_numpy(testX).float())
-var_testZ = Variable(t.from_numpy(testZ).float())
+trainX, trainZ, trainW = decoder.generate_data(N=N)
+testX, testZ, testW = decoder.generate_data(N=N)
 
 # VI approx
 print("Setting Up VI Encoders")
@@ -59,7 +61,7 @@ encoders = {
         }
 
 # Setup Experiment Output
-experiment_name = "LDSExperiment"
+experiment_name = "SLDSExperimentLowNoise"
 path_to_out= os.path.join(experiment_name,"out")
 if not os.path.isdir(path_to_out):
     os.makedirs(path_to_out)
