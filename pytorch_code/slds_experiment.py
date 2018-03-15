@@ -74,7 +74,7 @@ for alg_name in encoders.keys():
     path_to_figs = os.path.join(experiment_name,"figs", alg_name)
     if not os.path.isdir(path_to_figs):
         os.makedirs(path_to_figs)
-    lr = 0.01
+    lr = 0.001
     if alg_name in ["FullSELU_TriDiag", "SimpleRNN_TriDiag", "SELU_TriDiag"]:
         lr = 0.0001
     try:
