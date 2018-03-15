@@ -34,7 +34,7 @@ S = 100 # Length of Timeseries
 
 # LDS Model
 print("Setting Up SLDS Model Decoder")
-Pi = np.array([[0.9, 0.1, 0.0], [0.05, 0.9, 0.05], [0.0, 0.1, 0.9]])
+Pi = np.array([[0.95, 0.05, 0.0], [0.05, 0.9, 0.05], [0.0, 0.05, 0.95]])
 A = np.array([np.eye(m)*0.99, np.eye(m)*0.99, np.eye(m)*0.99])
 Delta_Q = np.array([np.ones(m), np.zeros(m), -np.ones(m)])*0.05
 Q = np.array([np.eye(m), np.eye(m), np.eye(m)])*0.1
@@ -81,6 +81,7 @@ for alg_name in encoders.keys():
         df = train_encoder_vi(encoders[alg_name], decoder, alg_name,
             lr=lr, trainX=trainX, trainZ=trainZ, testX=testX, testZ=testZ,
             num_epochs=101,
+            is_SLDS=True, trainW=trainW, testW=testW,
             path_to_out=path_to_out, path_to_figs=path_to_figs)
     except:
         print("Error with learning rate {0} for {1}".format(lr, alg_name))

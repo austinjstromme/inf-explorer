@@ -15,7 +15,7 @@ from encoder import (
         MeanFieldGaussian, TriDiagInvGaussian,
         elementwise_NN, dial_conv_NN, rnn_type_NN, full_connected_NN,
         )
-from figure_utils import plot_encoder, plot_encoder_resid
+from figure_utils import plot_encoder, plot_encoder_resid, plot_latent_state
 
 def get_encoder(encoder_nn_type, encoder_q_type, S=100):
     """ Helper for Encoder
@@ -85,7 +85,8 @@ def train_encoder_vi(encoder, decoder, alg_name, lr,
         trainX, trainZ, testX, testZ,
         batch_size=16, num_epochs=51, checkpoint=10,
         path_to_out="./", path_to_figs="./",
-        max_time=300, is_SLDS=False):
+        max_time=300,
+        is_SLDS=False, trainW=None, testW=None):
     """ Train VI
 
     Returns:
