@@ -141,8 +141,8 @@ def train_encoder_vi(encoder, decoder, alg_name, lr,
             counts += 1
             p_bar.set_description("Epoch {0}, ELBO {1}".format(epoch, elbo_hat))
         elapsed_time += time.time() - start_time
-        train_elbo = vi.elbo(var_trainX).data[0]
-        test_elbo = vi.elbo(var_testX).data[0]
+        train_elbo = vi.elbo(var_trainX[0:batch_size]).data[0]
+        test_elbo = vi.elbo(var_testX[0:batch_size]).data[0]
         progress = {
             'epoch': epoch,
             'train_elbo': train_elbo,
