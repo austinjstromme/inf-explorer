@@ -77,13 +77,12 @@ for alg_name in encoders.keys():
     lr = 0.01
     if alg_name in ["FullSELU_TriDiag", "SimpleRNN_TriDiag", "SELU_TriDiag"]:
         lr = 0.0001
-    df = train_encoder_vi(encoders[alg_name], decoder, alg_name,
-        lr=lr, trainX=trainX, trainZ=trainZ, testX=testX, testZ=testZ,
-        num_epochs=101,
-        is_SLDS=True, trainW=trainW, testW=testW,
-        path_to_out=path_to_out, path_to_figs=path_to_figs)
     try:
-        print("HI")
+        df = train_encoder_vi(encoders[alg_name], decoder, alg_name,
+            lr=lr, trainX=trainX, trainZ=trainZ, testX=testX, testZ=testZ,
+            num_epochs=101,
+            is_SLDS=True, trainW=trainW, testW=testW,
+            path_to_out=path_to_out, path_to_figs=path_to_figs)
     except:
         print("Error with learning rate {0} for {1}".format(lr, alg_name))
 
